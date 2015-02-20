@@ -49,7 +49,7 @@ class BookModelForm(forms.QueryModelForm):
 
 in *urls.py*
 
-```pytho
+```python
 from .forms import BookForm
 
 def example(request):
