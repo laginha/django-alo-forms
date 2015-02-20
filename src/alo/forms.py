@@ -1,5 +1,4 @@
-from django.forms.fields import *
-from django.forms import Form, ModelForm
+from django.forms import *
 from .mixins import QueryFormMixin
 from .operators import AND, OR
 
@@ -8,7 +7,11 @@ class QueryModelForm(ModelForm, QueryFormMixin):
     def __init__(self, *args, **kwargs):
         super(QueryModelForm, self).__init__(*args, **kwargs)
         self.set_meta()
-    
+        choice_fields = (ModelChoiceField, ModelMultipleChoiceField)
+        for field in self.fields.values():
+            if not isinstance(field, choice_fields):
+                field.required = False
+                    
     def full_clean(self):
         super(QueryModelForm, self).full_clean()
         self.clean_extralogic()

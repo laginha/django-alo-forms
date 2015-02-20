@@ -4,8 +4,9 @@ Add extra logic to your Django forms!
 
 ```python
 from alo import forms
+from alo.operators import AND, OR
 
-class ListBook(forms.QueryForm):
+class BookForm(forms.QueryForm):
     # Django form fields
     year   = forms.IntegerField(required=False, min_value=1970, max_value=2012)
     title  = forms.CharField(required=False)
@@ -26,10 +27,8 @@ class ListBook(forms.QueryForm):
             # Combine the form fields with boolean logic
             AND('genre', OR('author', 'house'))   
         ]
-  
 
-class QueryBookForm(forms.QueryModelForm):
-    # Just like a Django's ModelForm
+class BookModelForm(forms.QueryModelForm):
     
     class Meta:
         model = Book
@@ -46,4 +45,16 @@ class QueryBookForm(forms.QueryModelForm):
             # Combine the form fields with boolean logic
             AND('genres', OR('author', 'publishing_house'))   
         ]
+```
+
+in *urls.py*
+
+```pytho
+from .forms import BookForm
+
+def example(request):
+    form = BookForm(request.GET)
+    if form.is_valid():
+        ...
+    ...
 ```
