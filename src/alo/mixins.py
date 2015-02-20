@@ -3,27 +3,31 @@ from django import forms
 from .operators import BaseOperator, AND, OR
 
 
-class Parameters(dict):
-    def __init__(self):
-        self.validated = {}
-
-
 class QueryFormMixin(object):
+
+    @property
+    def non_empty_data(self):
+        if not hasattr(self, '_non_empty_data'):
+            self.set_parameters()
+        return self._non_empty_data
 
     @property
     def parameters(self):
         if not hasattr(self, '_parameters'):
-            self._parameters = Parameters()
-            items = self.fields.iteritems()
-            name_to_aliases = {
-                name: self._meta.aliases[name] for name,field in items
-            }
-            for name,value in self.cleaned_data.iteritems():
-                if value:
-                    self._parameters.validated[name] = value
-                    for each in name_to_aliases[name]:
-                        self._parameters[ each ] = value
+            self.set_parameters()
         return self._parameters
+    
+    def set_parameters(self):
+        self._parameters = Parameters()
+        items = self.fields.iteritems()
+        name_to_aliases = {
+            name: self._meta.aliases[name] for name,field in items
+        }
+        for name,value in self.cleaned_data.iteritems():
+            if value:
+                self._non_empty_data[name] = value
+                for each in name_to_aliases[name]:
+                    self._parameters[ each ] = value
     
     def set_meta(self):
         if not hasattr(self, '_meta'):
