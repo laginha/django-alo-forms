@@ -15,13 +15,13 @@ class QueryFormMixin(object):
         if not hasattr(self, '_parameters'):
             self._parameters = Parameters()
             items = self.fields.iteritems()
-            name_to_maps = {
+            name_to_aliases = {
                 name: self._meta.aliases[name] for name,field in items
             }
             for name,value in self.cleaned_data.iteritems():
                 if value:
                     self._parameters.validated[name] = value
-                    for each in name_to_maps[name]:
+                    for each in name_to_aliases[name]:
                         self._parameters[ each ] = value
         return self._parameters
     

@@ -51,10 +51,14 @@ in *urls.py*
 
 ```python
 from .forms import BookForm
+from .models import Book
 
 def example(request):
     form = BookForm(request.GET)
     if form.is_valid():
+        # form.parameters is like form.cleaned_data but 
+        # with aliases applied and without empty values
+        Book.objects.filter(**form.parameters)
         ...
     ...
 ```
