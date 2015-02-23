@@ -1,4 +1,10 @@
-from django.forms import *
+try:
+    from django.contrib.gis.forms import *
+except ImportError:
+    import sys
+    sys.stdout.write("Warning: Could not find the GEOS library.\n")
+    from django.forms import *
+    
 from .mixins import QueryFormMixin
 from .operators import AND, OR
 
