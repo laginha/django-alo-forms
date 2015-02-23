@@ -18,7 +18,8 @@ class QueryFormMixin(object):
         return self._parameters
     
     def set_parameters(self):
-        self._parameters = Parameters()
+        self._parameters = {}
+        self._non_empty_data = {}
         items = self.fields.iteritems()
         name_to_aliases = {
             name: self._meta.aliases[name] for name,field in items
