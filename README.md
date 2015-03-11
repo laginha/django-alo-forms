@@ -1,5 +1,12 @@
 # django-alo-forms
 
+## Install
+
+    pip install django_alo_forms
+
+
+## Usage
+
 Add extra logic to your Django forms!
 
 ```python
