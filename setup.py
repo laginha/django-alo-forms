@@ -7,7 +7,7 @@ install_reqs = parse_requirements("requirements.txt")
 reqs = [str(each.req) for each in install_reqs if each.req]
 
 setup(
-    name             = 'alo-forms',
+    name             = 'django-alo-forms',
     version          = '1.0',
     author           = "Diogo Laginha",
     author_email     = "diogo.laginha.machado@gmail.com",
