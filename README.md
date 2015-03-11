@@ -1,5 +1,8 @@
 # django-alo-forms
 
+Add extra logic to your Django forms!
+
+
 ## Install
 
     pip install django_alo_forms
@@ -7,7 +10,7 @@
 
 ## Usage
 
-Add extra logic to your Django forms!
+in *forms.py*
 
 ```python
 from alo import forms
@@ -54,7 +57,7 @@ class BookModelForm(forms.QueryModelForm):
         ]
 ```
 
-in *urls.py*
+in *views.py*
 
 ```python
 from .forms import BookForm
