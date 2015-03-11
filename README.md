@@ -22,7 +22,7 @@ class BookForm(forms.QueryForm):
     house  = forms.CharField(required=False)
  
     class Meta:
-        aliases = {
+        lookups = {
             # query_name: model_field__lookups
             'year': 'publication_date__year',
             'title': 'title__icontains',
@@ -43,7 +43,7 @@ class BookModelForm(forms.QueryModelForm):
             'publication_date', 'title', 'genres', 
             'author', 'publishing_house'
         )
-        aliases = {
+        lookups = {
             # query_name: model_field__lookups
             'publication_date': 'publication_date__year',
             'title': 'title__icontains',
@@ -64,7 +64,7 @@ def example(request):
     form = BookForm(request.GET)
     if form.is_valid():
         # form.parameters is like form.cleaned_data but 
-        # with aliases applied and without empty values
+        # with lookups applied and without empty values
         Book.objects.filter(**form.parameters)
         ...
     ...

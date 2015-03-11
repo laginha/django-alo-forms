@@ -7,7 +7,7 @@ class BookModelForm(forms.QueryModelForm):
     class Meta:
         model = Book
         fields = ('publication_date', 'title', 'genres', 'author')
-        aliases = {
+        lookups = {
             'publication_date': 'publication_date__year',
             'title': 'title__icontains',
         }
@@ -23,7 +23,7 @@ class BookForm(forms.QueryForm):
     author = forms.CharField(required=False)
     
     class Meta:
-        aliases = {
+        lookups = {
             'year': 'publication_date__year',
             'title': 'title__icontains',
             'genre': 'genres',

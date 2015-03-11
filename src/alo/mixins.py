@@ -21,31 +21,31 @@ class QueryFormMixin(object):
         self._parameters = {}
         self._non_empty_data = {}
         items = self.fields.iteritems()
-        name_to_aliases = {
-            name: self._meta.aliases[name] for name,field in items
+        name_to_lookups = {
+            name: self._meta.lookups[name] for name,field in items
         }
         for name,value in self.cleaned_data.iteritems():
             if value:
                 self._non_empty_data[name] = value
-                for each in name_to_aliases[name]:
+                for each in name_to_lookups[name]:
                     self._parameters[ each ] = value
     
     def set_meta(self):
         if not hasattr(self, '_meta'):
             self._meta = type('Meta', (object,), {})()
-        self.set_aliases()
+        self.set_lookups()
         self.set_extralogic()
     
-    def set_aliases(self):
-        self._meta.aliases = {}
+    def set_lookups(self):
+        self._meta.lookups = {}
         for name,field in self.fields.iteritems():
-             self._meta.aliases[name] = (name,)
-        if hasattr(self.Meta, 'aliases'):
-            for fieldname,alias in self.Meta.aliases.items():
+             self._meta.lookups[name] = (name,)
+        if hasattr(self.Meta, 'lookups'):
+            for fieldname,alias in self.Meta.lookups.items():
                 if isinstance(alias, (str, unicode)):
-                    self._meta.aliases[fieldname] = (alias,)
+                    self._meta.lookups[fieldname] = (alias,)
                 else:
-                    self._meta.aliases[fieldname] = alias
+                    self._meta.lookups[fieldname] = alias
                 
     def set_extralogic(self):
         def get_logic(operator):
