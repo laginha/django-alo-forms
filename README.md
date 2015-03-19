@@ -94,7 +94,7 @@ class StoreForm(forms.QueryForm):
         multifield_lookups = {
             # tuple_of_field_names: callable_that_returns_a_dict
             ('center', 'radius'): lambda center,radius: {
-                'stores__distance': (center, D(km=radius))
+                'location__distance_lte': (center, D(km=radius))
             },
             ('books', 'range'):  lambda books,range: {
                 'pages__range': (books-range, books+range)
