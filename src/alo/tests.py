@@ -1,32 +1,175 @@
 #!/usr/bin/env python
 # encoding: utf-8
 from django.test import TestCase
+from django.test.client import Client, RequestFactory
 from .forms import QueryForm, Field
 from .operators import AND, OR, BaseOperator
 
 
-A = Field()
-B = Field()
-C = Field()
-D = Field()
-E = Field()
+A = Field(required=False)
+B = Field(required=False)
+C = Field(required=False)
+D = Field(required=False)
+E = Field(required=False)
+F = Field(required=False)
 
-class SomeForm(QueryForm):
-    a, b, c, d, e = A, B, C, D, E
+
+class QueryFormTestCase(TestCase):
     
-    class Meta:
-        extralogic = [
-            AND('b', 'c', 'd'),
-            OR('e', 'a', 'b'),
-            AND('c', OR('d', 'e'), 'a'),
-            OR(AND('b', 'c', 'd'), 'e'),
-        ]
-
-
-class FormTestCase(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
     
-    def test_logic(self):
-        form = SomeForm()
+    def test_lookups(self):
+        
+        class Form(QueryForm):
+            a, b, c = A, B, C
+    
+            class Meta:
+                lookups = {
+                    'a': 'a__contains',
+                    'b': 'b__id',
+                }
+            
+        f = Form({'a': 1, 'b':1, 'c':1})
+        lookups = f._meta.lookups.values()
+        self.assertEqual(len(lookups), len(f.fields))
+        self.assertTrue('a__contains' in lookups)
+        self.assertEqual(f._meta.lookups['a'], 'a__contains')
+        self.assertTrue('b__id' in lookups)
+        self.assertEqual(f._meta.lookups['b'], 'b__id')
+        self.assertTrue('c' in lookups)
+        self.assertEqual(f._meta.lookups['c'], 'c')
+        self.assertFalse('c__year' in lookups)
+    
+    def test_multifield_lookups(self):
+        
+        class Form(QueryForm):
+            a, b = A, B
+    
+            class Meta:
+                multifield_lookups = {
+                    ('a', 'b'): lambda a,b: {'a__range': (a-b, a)}
+                }
+                
+        f = Form({'a':2, 'b':1})
+        lookups = f._meta.multifield_lookups
+        self.assertTrue(('a', 'b') in lookups)
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a__range' in f.parameters)
+        self.assertTrue('a' in f.validated_data)
+        self.assertTrue('b' in f.validated_data)
+        self.assertEqual(f.parameters['a__range'], (1, 2))
+        
+    def test_parameters(self):
+        
+        class Form(QueryForm):
+            a, b, c = A, B, C
+    
+            class Meta:
+                lookups = {
+                    'a': 'a__contains',
+                    'b': 'b__id',
+                    'c': 'c__year',
+                }
+        
+        f = Form({'a': 1, 'b':1, 'c':1})
+        self.assertTrue(f.is_valid())
+        for fieldname,lookup in f._meta.lookups.items():
+            self.assertTrue(f.parameters.get(lookup, None))
+            self.assertEqual(f.cleaned_data[fieldname], f.parameters[lookup])
+        f = Form({'a': 1})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a__contains' in f.parameters)
+        self.assertTrue('a' in f.cleaned_data)
+        self.assertFalse('b__id' in f.parameters)
+        self.assertTrue('b' in f.cleaned_data)
+        
+    def test_default_data(self):
+        class Form(QueryForm):
+            a = Field(required=False, initial=1)
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.validated_data)
+        self.assertTrue('a' in f.parameters)
+        self.assertEqual(f.validated_data['a'], f.fields['a'].initial)
+        self.assertEqual(f.validated_data['a'], f.parameters['a'])
+        f = Form({'a': 2})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.validated_data)
+        self.assertTrue('a' in f.parameters)
+        self.assertNotEqual(f.validated_data['a'], f.fields['a'].initial)
+        self.assertEqual(f.validated_data['a'], f.parameters['a'])
+        
+    def test_no_defaults(self):
+        
+        class Form(QueryForm):
+            a = Field(required=False, initial=1)
+            
+            class Meta:
+                no_defaults = True
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        self.assertFalse('a' in f.validated_data)
+        self.assertFalse('a' in f.parameters)
+    
+    def test_is_valid_with_or(self):
+        
+        class Form(QueryForm):
+            a, b, c = A, B, C
+    
+            class Meta:
+                extralogic = [
+                    OR('a', 'b', 'c'),
+                ]
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':1})
+        self.assertTrue(f.is_valid())
+        f = Form({'b':1})
+        self.assertTrue(f.is_valid())
+        f = Form({'c':1})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':1, 'b':1})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':1, 'b':1, 'c':1})
+        self.assertTrue(f.is_valid())
+    
+    def test_is_valid_with_and(self):
+        
+        class Form(QueryForm):
+            a, b, c = A, B, C
+    
+            class Meta:
+                extralogic = [
+                    AND('a', 'b', 'c'),
+                ]
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':1})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':1, 'b':1})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':1, 'b':1, 'c':1})
+        self.assertTrue(f.is_valid())
+        
+    def test_extralogic(self):
+        
+        class Form(QueryForm):
+            a, b, c, d, e, f = A, B, C, D, E, F
+    
+            class Meta:
+                extralogic = [
+                    AND('b', 'c', 'd'),
+                    OR('e', 'a', 'f'),
+                    AND('c', OR('d', 'e'), 'a'),
+                    OR(AND('b', 'c', 'd'), 'e'),
+                ]
+        
+        form = Form()
         logic = form._meta.extralogic
         assert len(logic) == 4
         
@@ -41,7 +184,7 @@ class FormTestCase(TestCase):
         assert isinstance(logic[1].operands[0], Field)
         assert isinstance(logic[1].operands[1], Field)
         assert isinstance(logic[1].operands[2], Field)
-        assert str(logic[1]) == "( e OR a OR b )"
+        assert str(logic[1]) == "( e OR a OR f )"
         assert len(logic[1]) == 3
         
         assert isinstance(logic[2], AND)

@@ -18,6 +18,7 @@ class BookModelForm(forms.QueryModelForm):
 
 class BookForm(forms.QueryForm):
     year   = forms.IntegerField(required=False, min_value=1970, max_value=2012)
+    range  = forms.IntegerField(required=False, initial=1)
     title  = forms.CharField(required=False)
     genre  = forms.CharField(required=False)
     author = forms.CharField(required=False)
@@ -29,7 +30,13 @@ class BookForm(forms.QueryForm):
             'genre': 'genres',
             'author': 'author_id',
         }
+        multifield_lookups = {
+            ('year', 'range'): lambda year,range: {
+                'publication_date__year__range': (year-range, year+range)
+            },
+        }
         extralogic = [
-            AND('genre', OR('author', 'title'))   
+            AND('genre', OR('author', 'title')),
+            AND('range', 'year')
         ]
     
