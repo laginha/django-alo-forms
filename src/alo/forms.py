@@ -1,5 +1,5 @@
 try:
-    from django.contrib.gis.forms import *
+    from .fields import *
 except ImportError:
     import sys
     sys.stdout.write("Warning: Could not find the GEOS library.\n")

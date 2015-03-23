@@ -15,6 +15,7 @@ C = Field(required=False)
 D = Field(required=False)
 E = Field(required=False)
 F = Field(required=False)
+            
 
 class QueryModelFormTestCase(TestCase):
     
@@ -66,6 +67,74 @@ class QueryModelFormTestCase(TestCase):
 
 class QueryFormTestCase(TestCase):
 
+    def test_BoundingBoxField(self):
+        try:
+            from .forms import BoundingBoxField
+        except ImportError:
+            return
+            
+        class Form(QueryForm):
+            box = BoundingBoxField()
+        
+        lat0, lng0 = 40.0, -8.1 
+        lat1, lng1 = 41.0, -9.1   
+        f = Form({
+            'box_0': '%s,%s'%(lng0,lat0),
+            'box_1': '%s,%s'%(lng1,lat1),
+        })
+        self.assertTrue(f.is_valid())
+        self.assertTrue('box' in f.cleaned_data)
+        polygon1 = f.cleaned_data['box']
+        self.assertEqual(polygon1.num_points, 5)
+        self.assertEqual(polygon1, f.parameters['box'])
+        
+        class Form(QueryForm):
+            box = BoundingBoxField(latitude_first=True)
+            
+            class Meta:
+                lookups = {
+                    'box': 'point__contained'
+                }
+            
+        f = Form({
+            'box_0': '%s,%s'%(lat0,lng0),
+            'box_1': '%s,%s'%(lat1,lng1),
+        })
+        self.assertTrue(f.is_valid())
+        self.assertTrue('box' in f.cleaned_data)
+        polygon2 = f.cleaned_data['box']
+        self.assertEqual(polygon2.num_points, 5)
+        self.assertEqual(polygon2, f.parameters['point__contained'])
+        self.assertEqual(polygon1, polygon2)
+        
+    def test_CoordsField(self):
+        try:
+            from .forms import CoordsField
+        except ImportError:
+            return
+            
+        lat, lng = 40.0, -8.1
+        
+        def assert_form(lat, lng, form):
+            self.assertTrue(form.is_valid())
+            self.assertTrue('coords' in form.cleaned_data)
+            coords = form.cleaned_data['coords'].coords
+            self.assertEqual(coords[0], lng)
+            self.assertEqual(coords[1], lat)
+            self.assertEqual(form.cleaned_data['coords'], form.parameters['coords'])
+            
+        class Form(QueryForm):
+            coords = CoordsField()
+        
+        f = Form({'coords': '%s,%s'%(lng,lat)})
+        assert_form(lat=lat, lng=lng, form=f)
+
+        class Form(QueryForm):
+            coords = CoordsField(latitude_first=True)
+        
+        f = Form({'coords': '%s,%s'%(lat,lng)})
+        assert_form(lat=lat, lng=lng, form=f)
+
     def test_validate_decorator(self):
         
         class Form(QueryForm):
@@ -88,7 +157,6 @@ class QueryFormTestCase(TestCase):
         request = factory.get('')
         response = decorator(view)(request)
         self.assertEqual(response.content, 'success')
-    
     
     def test_lookups(self):
         

@@ -98,6 +98,51 @@ It is worth noting that `validate` works in any kind of views (function-base, cl
 Besides, `validate` is able to detect if the given form class is a subclass `Form` or `ModelForm`. In case of the latter, the decorator instantiates the form with the `instance` argument if the *named group* `pk` is present in the *urlpattern* (useful for getting or updating a resource). You can change the expected *named group* using the decorator argument `add_instance_using`.
 
 
+## Other fields
+
+Besides the fields that django already provides, you may use a couple more from `django-alo-forms`. Both require the **GEOS library** to be available.
+
+### CoordsField
+
+```python
+from alo import forms 
+
+class CityForm(forms.QueryForm):
+    coords = forms.CoordsField()
+    
+    class Meta:
+        lookups = {
+            'coords': 'area__contains'
+        }
+```
+
+- inherits from `CharField`
+- similar to `PointField` but with a friendlier input format
+- expected input format: `'<float>,<float>'`
+- converts the input to a `Point`
+- takes an additional argument: `latitude_first`. If set to `True`, it is expected that the first given `float` to be the latitude and the second the longitude. It default to `False`.
+
+
+### BoundingBoxField
+
+```python
+from alo import forms 
+
+class StoreForm(forms.QueryForm):
+    box = forms.BoundingBoxField()
+    
+    class Meta:
+        lookups = {
+            'box': 'point__contained'
+        }
+```
+
+- inherits directly from `MultiValueField`
+- expected inputs: `<fieldname>_0` and `<fieldname>_1`
+- converts the input to a `Polygon`
+- takes an additional argument: `latitude_first` (defaults to `False`)
+
+
 ## Other meta options
 
 ### multifield_lookups
@@ -106,6 +151,7 @@ Group multiple fields to a single lookup. Useful for ranges and geo-lookups.
 
 ```python
 from django.contrib.gis.measure import D
+from alo import forms
 
 class StoreForm(forms.QueryForm):
     books  = forms.IntegerField(required=False)
@@ -134,16 +180,13 @@ class StoreForm(forms.QueryForm):
 By default, `QueryForm.parameter` and `QueryModelForm.parameter` instance attribute use the `initial` field's argument as the default value when no input is given for that particular field.
 
 ```python
+from alo import forms
+
 class BookForm(forms.QueryForm):
     pages = forms.IntegerField(required=False)
     range = forms.IntegerField(required=False, initial=50)
     
     class Meta:
-        multifield_lookups = {
-            ('pages', 'range'):  lambda pages,range: {
-                'pages__range': (pages-range, pages+range)
-            },
-        }
         extralogic = [
             # no need to add AND('pages', 'range')
             # since 'range' has a default value (50)
