@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 from django.test import TestCase
+from django.contrib.auth.models import User
 from django.test.client import Client, RequestFactory
-from .forms import QueryForm, Field
+from django.http import HttpResponse
+from .forms import QueryForm, QueryModelForm, Field
 from .operators import AND, OR, BaseOperator
+from .decorators import validate
 
 
 A = Field(required=False)
@@ -13,11 +16,79 @@ D = Field(required=False)
 E = Field(required=False)
 F = Field(required=False)
 
+class QueryModelFormTestCase(TestCase):
+    
+    def test_validate_decorator(self):
+        
+        class Form(QueryModelForm):
+            class Meta:
+                model = User
+                fields = ('username', 'email')
+                extralogic = [AND('username', 'email'),]
+        
+        def view(request, pk):
+            return HttpResponse('success')
+            
+        def another_view(request, id):
+            return HttpResponse('success')
+                
+        user = User.objects.create(username='user', email='user@email')
+        factory = RequestFactory()
+        decorator = validate(Form)
+        
+        request = factory.get('', {'username':1})
+        response = decorator(view)(request, pk=user.pk)
+        self.assertNotEqual(response.content, 'success')
+        self.assertEqual(request.form.instance, user)
+        
+        request = factory.get('', {'username':'user', 'email':'1@email.com'})
+        response = decorator(view)(request, pk=user.pk)
+        self.assertEqual(response.content, 'success')
+        self.assertEqual(request.form.instance, user)
+        
+        request = factory.get('')
+        response = decorator(view)(request, pk=user.pk)
+        self.assertNotEqual(response.content, 'success')
+        self.assertEqual(request.form.instance, user)
+        
+        decorator = validate(Form, add_instance_using='id')
+        request = factory.get('', {})
+        response = decorator(another_view)(request, id=user.pk)
+        self.assertNotEqual(response.content, 'success')
+        self.assertEqual(request.form.instance, user)
+        
+        decorator = validate(Form, add_instance_using='id')
+        request = factory.get('', {'username':1})
+        response = decorator(another_view)(request, pk=user.pk)
+        self.assertNotEqual(response.content, 'success')
+        self.assertNotEqual(request.form.instance, user)
+        
 
 class QueryFormTestCase(TestCase):
+
+    def test_validate_decorator(self):
+        
+        class Form(QueryForm):
+            a, b = A, B
     
-    def setUp(self):
-        self.factory = RequestFactory()
+            class Meta:
+                extralogic = [AND('a', 'b'),]
+        
+        def view(request):
+            return HttpResponse('success')
+        
+        factory = RequestFactory()
+        decorator = validate(Form)
+        request = factory.get('', {'a':1})
+        response = decorator(view)(request)
+        self.assertNotEqual(response.content, 'success')
+        request = factory.get('', {'a':1, 'b':1})
+        response = decorator(view)(request)
+        self.assertEqual(response.content, 'success')
+        request = factory.get('')
+        response = decorator(view)(request)
+        self.assertEqual(response.content, 'success')
+    
     
     def test_lookups(self):
         

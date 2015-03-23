@@ -75,6 +75,29 @@ def example(request):
     ...
 ```
 
+## Decorator
+
+Instead of the example view above, you can use the `validate` decorator as follows:
+
+```python
+from alo.decorators import validate
+from .forms import BookForm
+from .models import Book
+
+@validate(BookForm)
+def example(request):
+    # enters view if form is valid
+    Book.objects.filter(**form.parameters)
+    ...
+```
+
+If `form` is not valid, `validate` returns a JsonResponse with `form.errors` as content and status code `400`. 
+
+It is worth noting that `validate` works in any kind of views (function-base, class-bases, custom-bases) since it scans the view arguments for the `HttpRequest` object to validate the form.
+
+Besides, `validate` is able to detect if the given form class is a subclass `Form` or `ModelForm`. In case of the latter, the decorator instantiates the form with the `instance` argument if the *named group* `pk` is present in the *urlpattern* (useful for getting or updating a resource). You can change the expected *named group* using the decorator argument `add_instance_using`.
+
+
 ## Other meta options
 
 ### multifield_lookups
@@ -128,3 +151,4 @@ class BookForm(forms.QueryForm):
 ```
 
 To disable this feature, set `no_defaults` meta option to `True`.
+

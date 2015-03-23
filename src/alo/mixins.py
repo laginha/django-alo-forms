@@ -6,6 +6,11 @@ from .operators import BaseOperator, AND, OR
 class QueryFormMixin(object):
 
     @property
+    def non_empty_data(self):
+        # legacy
+        return self.validated_data
+
+    @property
     def validated_data(self):
         if not hasattr(self, '_validated_data'):
             self.set_parameters()
@@ -88,4 +93,7 @@ class QueryFormMixin(object):
             try:
                 each.is_valid(self.validated_data)
             except ValidationError as e:
-                self.add_error(e.subject, e.message)
+                try:
+                    self.add_error(e.subject, e.message)
+                except AttributeError:
+                    self.__errors[e.subject] = e.message
