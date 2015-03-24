@@ -147,18 +147,18 @@ class StoreForm(forms.QueryForm):
 from alo import forms 
 
 class StoreForm(forms.QueryForm):
-    center = forms.CircleField(distance=5, unit='km') #default values
+    center = forms.CircleField()
     
     class Meta:
         lookups = {
-            'center': 'point__distance__lte'
+            'center': 'point__distance_lte'
         }
 ```
 
 - inherits directly from `CoordsField`
 - expected the same inputs as its parent class
 - converts the input to a tuple: `(<Point>, <Distance object>)`
-- takes two additional argument: `distance` (defaults to `5`) and `unit` (defaults to `km`)
+- takes two additional argument: `distance` (defaults to `5`) and `unit` (defaults to `'km'`)
 
 
 ## Other meta options
