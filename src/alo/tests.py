@@ -135,6 +135,25 @@ class QueryFormTestCase(TestCase):
         f = Form({'coords': '%s,%s'%(lat,lng)})
         assert_form(lat=lat, lng=lng, form=f)
 
+    def test_CircleField(self):
+        try:
+            from .forms import CircleField
+        except ImportError:
+            return
+        
+        class Form(QueryForm):
+            center = CircleField()
+        
+        lat, lng = 40.0, -8.1
+        f = Form({'center': '%s,%s'%(lng,lat)})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('center' in f.cleaned_data)
+        self.assertTrue(isinstance(f.cleaned_data['center'], tuple))
+        coords = f.cleaned_data['center'][0].coords
+        self.assertEqual(coords[0], lng)
+        self.assertEqual(coords[1], lat)
+        self.assertEqual(f.cleaned_data['center'], f.parameters['center'])
+
     def test_validate_decorator(self):
         
         class Form(QueryForm):
@@ -149,14 +168,13 @@ class QueryFormTestCase(TestCase):
         factory = RequestFactory()
         decorator = validate(Form)
         request = factory.get('', {'a':1})
-        response = decorator(view)(request)
-        self.assertNotEqual(response.content, 'success')
+        wrapper = decorator(view)
+        self.assertEqual(wrapper.__name__, view.__name__)
+        self.assertNotEqual(wrapper(request).content, 'success')
         request = factory.get('', {'a':1, 'b':1})
-        response = decorator(view)(request)
-        self.assertEqual(response.content, 'success')
+        self.assertEqual(wrapper(request).content, 'success')
         request = factory.get('')
-        response = decorator(view)(request)
-        self.assertEqual(response.content, 'success')
+        self.assertEqual(wrapper(request).content, 'success')
     
     def test_lookups(self):
         

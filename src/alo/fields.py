@@ -1,5 +1,6 @@
 from django.contrib.gis.forms import *
 from django.contrib.gis.geos import MultiPoint, Point
+from django.contrib.gis.measure import D
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 import math
@@ -62,4 +63,11 @@ class BoundingBoxField(MultiValueField):
         return None
 
 
-
+class CircleField(CoordsField):
+    def __init__(self, distance=5, unit='km', **kwargs):
+        self.distance = D(**{unit: distance})
+        super(CircleField, self).__init__(**kwargs)
+        
+    def to_python(self, value):
+        point = super(CircleField, self).to_python(value)
+        return (point, self.distance)

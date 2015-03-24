@@ -100,7 +100,7 @@ Besides, `validate` is able to detect if the given form class is a subclass `For
 
 ## Other fields
 
-Besides the fields that django already provides, you may use a couple more from `django-alo-forms`. Both require the **GEOS library** to be available.
+Besides the fields that django already provides, there are three more fields that you may find useful: `CoordsField`, `BoundingBoxField` and `CircleField`. All require the **GEOS library** to be available.
 
 ### CoordsField
 
@@ -120,8 +120,7 @@ class CityForm(forms.QueryForm):
 - similar to `PointField` but with a friendlier input format
 - expected input format: `'<float>,<float>'`
 - converts the input to a `Point`
-- takes an additional argument: `latitude_first`. If set to `True`, it is expected that the first given `float` to be the latitude and the second the longitude. It default to `False`.
-
+- takes an additional argument: `latitude_first` (default to `False`). If set to `True`, it is expected that the first given `float` to be the latitude and the second the longitude.
 
 ### BoundingBoxField
 
@@ -141,6 +140,25 @@ class StoreForm(forms.QueryForm):
 - expected inputs: `<fieldname>_0` and `<fieldname>_1`
 - converts the input to a `Polygon`
 - takes an additional argument: `latitude_first` (defaults to `False`)
+
+### CircleField
+
+```python
+from alo import forms 
+
+class StoreForm(forms.QueryForm):
+    center = forms.CircleField(distance=5, unit='km') #default values
+    
+    class Meta:
+        lookups = {
+            'center': 'point__distance__lte'
+        }
+```
+
+- inherits directly from `CoordsField`
+- expected the same inputs as its parent class
+- converts the input to a tuple: `(<Point>, <Distance object>)`
+- takes two additional argument: `distance` (defaults to `5`) and `unit` (defaults to `km`)
 
 
 ## Other meta options

@@ -6,11 +6,6 @@ from .operators import BaseOperator, AND, OR
 class QueryFormMixin(object):
 
     @property
-    def non_empty_data(self):
-        # legacy
-        return self.validated_data
-
-    @property
     def validated_data(self):
         if not hasattr(self, '_validated_data'):
             self.set_parameters()
