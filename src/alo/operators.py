@@ -31,33 +31,31 @@ class BaseOperator(object):
         exception.subject = subject
         raise exception
     
-    def is_valid_data(self, obj, validated_data, cleaned_data):
+    def is_valid_data(self, obj, validated_data):
         if isinstance(obj, Field):
-            if cleaned_data.get(obj.attrname):
-                return validated_data.get(obj.attrname)
-            return cleaned_data.get(obj.attrname)
+            return validated_data.get(obj.attrname)
         else:
-            return obj.is_valid(validated_data, cleaned_data)
+            return obj.is_valid(validated_data)
         
 
 class OR(BaseOperator):
-    def is_valid(self, validated_data, cleaned_data):
+    def is_valid(self, validated_data):
         for each in self.operands:
-            if self.is_valid_data(each, validated_data, cleaned_data):
+            if self.is_valid_data(each, validated_data):
                 return True
         return False
 
 
 class AND(BaseOperator): 
-    def is_valid(self, validated_data, cleaned_data):
-        validated = 0
+    def is_valid(self, validated_data):
+        validated = []
         for each in self.operands:
-            if not self.is_valid_data(each, validated_data, cleaned_data):
+            if not self.is_valid_data(each, validated_data):
                 if self.required:
                     self.raise_exception(subject=each.attrname)
             else:
-                validated += 1
-        if 0 < validated < len(self.operands):
-            self.raise_exception(subject=None)
+                validated.append( each.attrname )
+        if 0 < len(validated) < len(self.operands):
+            self.raise_exception(subject=validated[0])
         return True
     

@@ -90,9 +90,12 @@ class QueryFormMixin(object):
     def clean_extralogic(self):
         for each in self._meta.extralogic:
             try:
-                each.is_valid(self.validated_data, self.cleaned_data)
+                each.is_valid(self.validated_data)
             except ValidationError as e:
+                name = e.subject
+                if self.validated_data[name] == self._meta.defaults[name]:
+                    continue
                 try:
-                    self.add_error(e.subject, e.message)
+                    self.add_error(name, e.messages)
                 except AttributeError:
-                    self.__errors[e.subject] = e.message
+                    self._errors[name] = e.messages
