@@ -17,6 +17,8 @@ class CoordsField(CharField):
         super(CoordsField, self).__init__(**kwargs)
         
     def to_python(self, value):
+        if not value:
+            return None
         in_range = lambda lon,lat: (-90 < lat < 90) and (-180 < lon < 180)
         coords = value.split(',')
         if len(coords) != 2:
@@ -69,5 +71,7 @@ class CircleField(CoordsField):
         super(CircleField, self).__init__(**kwargs)
         
     def to_python(self, value):
+        if not value:
+            return None
         point = super(CircleField, self).to_python(value)
         return (point, self.distance)

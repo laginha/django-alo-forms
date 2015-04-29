@@ -28,7 +28,7 @@ class QueryFormMixin(object):
             value = self.get_data(fieldname)
             if value:
                 self._validated_data[fieldname] = value
-                self._parameters[self._meta.lookups[fieldname]] = value
+                self._parameters[lookup] = value
         for fields,call in self._meta.multifield_lookups.iteritems():
             values = []
             for fieldname in fields:
@@ -45,6 +45,7 @@ class QueryFormMixin(object):
             self._meta = type('Meta', (object,), {})()
         if not hasattr(self, 'Meta'):
             self.Meta = type('Meta', (object,), {})()
+        self._meta.required = getattr(self.Meta, 'required', [])
         self.set_lookups_and_defaults()
         self.set_multifield_lookups()
         self.set_extralogic()
@@ -56,7 +57,10 @@ class QueryFormMixin(object):
         for name,field in self.fields.iteritems():
              self._meta.lookups[name] = name
              if not self._meta.no_defaults:
-                 self._meta.defaults[name] = field.initial
+                 if callable(field.initial):
+                     self._meta.defaults[name] = field.initial()
+                 else:
+                     self._meta.defaults[name] = field.initial
         if hasattr(self.Meta, 'lookups'):
             for fieldname,alias in self.Meta.lookups.iteritems():
                 self._meta.lookups[fieldname] = alias
@@ -86,7 +90,7 @@ class QueryFormMixin(object):
     def clean_extralogic(self):
         for each in self._meta.extralogic:
             try:
-                each.is_valid(self.validated_data)
+                each.is_valid(self.validated_data, self.cleaned_data)
             except ValidationError as e:
                 try:
                     self.add_error(e.subject, e.message)

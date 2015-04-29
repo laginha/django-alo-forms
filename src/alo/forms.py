@@ -14,10 +14,14 @@ class QueryModelForm(ModelForm, QueryFormMixin):
         super(QueryModelForm, self).__init__(*args, **kwargs)
         self.set_meta()
         choice_fields = (ModelChoiceField, ModelMultipleChoiceField)
-        for field in self.fields.values():
+        for name,field in self.fields:
             if not isinstance(field, choice_fields):
                 field.required = False
-                    
+            elif name in self._meta.required:
+                field.required = True
+            else:
+                field.required = False
+                      
     def full_clean(self):
         super(QueryModelForm, self).full_clean()
         self.clean_extralogic()

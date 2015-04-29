@@ -1,4 +1,10 @@
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest
+try:
+    from django.http import JsonResponse
+    native_json_response = True
+except ImportError:
+    from easy_response.http import JsonResponse
+    native_json_response = False
 from django.shortcuts import get_object_or_404
 from django.forms import ModelForm
 from functools import wraps
@@ -29,13 +35,23 @@ class validate(object):
                 # if self.extra != None:
                 #     form_kwargs.update(self.extra(request))
                 return form_kwargs
+            
+            def error_response(form):
+                if native_json_response:
+                    return JsonResponse(form.errors, status=400, safe=False)
+                else:
+                    return JsonResponse(form.errors, status=400)
+            
+            def validate(request):
+                request.form = self.form_class(**get_form_kwargs(each))
+                if request.form.is_valid():
+                    return view(*args, **kwargs)
+                return error_response(request.form)
                 
             for each in args:
                 if isinstance(each, HttpRequest):
-                    each.form = self.form_class(**get_form_kwargs(each))
-                    if each.form.is_valid():
-                        return view(*args, **kwargs)
-                    return JsonResponse(each.form.errors, status=400, safe=False)
+                    return validate( each )
+            return validate( args[0] )        
         
         return wrapper
         
