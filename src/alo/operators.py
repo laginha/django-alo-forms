@@ -25,10 +25,11 @@ class BaseOperator(object):
         )
         return "( %s )" % reduce(func, self.operands)
 
-    def raise_exception(self, subject):
+    def raise_exception(self, subject, subjects=None):
         text = 'Expected logic: %s' %self
         exception = ValidationError(text)
         exception.subject = subject
+        exception.subjects = subjects or []
         raise exception
     
     def is_valid_data(self, obj, validated_data):
@@ -56,6 +57,6 @@ class AND(BaseOperator):
             else:
                 validated.append( each.attrname )
         if 0 < len(validated) < len(self.operands):
-            self.raise_exception(subject=validated[0])
+            self.raise_exception(subject=validated[0], subjects=validated[1:])
         return True
     

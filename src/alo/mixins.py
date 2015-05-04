@@ -28,7 +28,8 @@ class QueryFormMixin(object):
             value = self.get_data(fieldname)
             if value:
                 self._validated_data[fieldname] = value
-                self._parameters[lookup] = value
+                if fieldname not in self._meta.ignore:
+                    self._parameters[lookup] = value
         for fields,call in self._meta.multifield_lookups.iteritems():
             values = []
             for fieldname in fields:
@@ -40,16 +41,22 @@ class QueryFormMixin(object):
             if len(values) == len(fields):
                 self._parameters.update(call(*values))
     
+    def reset_required_fields(self):
+        if self._meta.required != None:
+            for name,field in self.fields.iteritems():
+                field.required = name in self._meta.required
+    
     def set_meta(self):                        
         if not hasattr(self, '_meta'):
             self._meta = type('Meta', (object,), {})()
         if not hasattr(self, 'Meta'):
             self.Meta = type('Meta', (object,), {})()
-        self._meta.required = getattr(self.Meta, 'required', [])
+        self._meta.required = getattr(self.Meta, 'required', None)
+        self._meta.ignore = getattr(self.Meta, 'ignore', [])
         self.set_lookups_and_defaults()
         self.set_multifield_lookups()
         self.set_extralogic()
-    
+            
     def set_lookups_and_defaults(self):
         self._meta.defaults = {}
         self._meta.lookups = {}
@@ -86,16 +93,28 @@ class QueryFormMixin(object):
         if hasattr(self.Meta, 'extralogic'):
             for each in self.Meta.extralogic:
                 self._meta.extralogic.append( get_logic(each) )
+    
+    def add_validation_error(self, name, messages):
+        try:
+            self.add_error(name, messages)
+        except AttributeError:
+            self._errors[name] = messages
                 
     def clean_extralogic(self):
+        
+        def is_to_ignore(name):
+            validated_data = self.validated_data.get(name, None)
+            default_data = self._meta.defaults.get(name, None)
+            return validated_data and validated_data == default_data
+        
         for each in self._meta.extralogic:
             try:
                 each.is_valid(self.validated_data)
             except ValidationError as e:
-                name = e.subject
-                if self.validated_data[name] == self._meta.defaults[name]:
-                    continue
-                try:
-                    self.add_error(name, e.messages)
-                except AttributeError:
-                    self._errors[name] = e.messages
+                for each in e.subjects:
+                    if is_to_ignore(each):
+                        self._parameters.pop(each, None)
+                if is_to_ignore(e.subject):
+                    self._parameters.pop(e.subject, None)
+                else:
+                    self.add_validation_error(e.subject, e.messages)

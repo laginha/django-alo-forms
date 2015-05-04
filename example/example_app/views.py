@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from .forms import BookModelForm, BookForm
 
 def example(request):
-    form = BookForm(request.GET)
+    form = BookModelForm(request.GET)
     if form.is_valid():
         return JsonResponse({
             'cleaned_data': form.cleaned_data,

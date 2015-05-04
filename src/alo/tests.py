@@ -258,6 +258,19 @@ class QueryFormTestCase(TestCase):
         self.assertNotEqual(f.validated_data['a'], f.fields['a'].initial)
         self.assertEqual(f.validated_data['a'], f.parameters['a'])
         
+        class Form(QueryForm):
+            a = Field(required=False, initial=1)
+            b = Field(required=False)
+            
+            class Meta:
+                extralogic = [AND('a', 'b')]
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.validated_data)
+        self.assertTrue('a' not in f.parameters)
+        self.assertEqual(f.validated_data['a'], f.fields['a'].initial)
+        
     def test_no_defaults(self):
         
         class Form(QueryForm):
@@ -269,6 +282,30 @@ class QueryFormTestCase(TestCase):
         f = Form({})
         self.assertTrue(f.is_valid())
         self.assertFalse('a' in f.validated_data)
+        self.assertFalse('a' in f.parameters)
+    
+    def test_required(self):
+        class Form(QueryForm):
+            a = Field()
+            
+            class Meta:
+                required = ['a']
+                
+        f = Form()
+        self.assertFalse(f.is_valid())
+        f = Form({'a': 1})
+        self.assertTrue(f.is_valid())
+        
+    def test_ignore(self):
+        class Form(QueryForm):
+            a = Field(required=False)
+            
+            class Meta:
+                ignore = ['a']
+                
+        f = Form({'a': 1})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.validated_data)
         self.assertFalse('a' in f.parameters)
     
     def test_is_valid_with_or(self):
@@ -312,6 +349,42 @@ class QueryFormTestCase(TestCase):
         self.assertFalse(f.is_valid())
         f = Form({'a':1, 'b':1, 'c':1})
         self.assertTrue(f.is_valid())
+        
+        class Form(QueryForm):
+            a = Field(required=False, initial=1)
+            b = Field(required=False)
+    
+            class Meta:
+                extralogic = [
+                    AND('a', 'b'),
+                ]
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':1})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':2})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':1, 'b':1})
+        self.assertTrue(f.is_valid())
+        
+        class Form(QueryForm):
+            a = Field(required=True)
+            b = Field(required=False, initial=1)
+    
+            class Meta:
+                extralogic = [
+                    AND('a', 'b'),
+                ]
+        
+        f = Form({})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':1})
+        self.assertTrue(f.is_valid())
+        f = Form({'a':1, 'b':2})
+        self.assertTrue(f.is_valid())
+        f = Form({'b':1})
+        self.assertFalse(f.is_valid())
         
     def test_extralogic(self):
         

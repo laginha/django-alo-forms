@@ -87,7 +87,7 @@ from .models import Book
 @validate(BookForm)
 def example(request):
     # enters view if form is valid
-    Book.objects.filter(**form.parameters)
+    Book.objects.filter(**request.form.parameters)
     ...
 ```
 
@@ -201,15 +201,47 @@ By default, `QueryForm.parameter` and `QueryModelForm.parameter` instance attrib
 from alo import forms
 
 class BookForm(forms.QueryForm):
-    pages = forms.IntegerField(required=False)
+    pages = forms.IntegerField(required=True)
     range = forms.IntegerField(required=False, initial=50)
     
     class Meta:
         extralogic = [
             # no need to add AND('pages', 'range')
             # since 'range' has a default value (50)
+            # and pages is required
         ]
 ```
 
 To disable this feature, set `no_defaults` meta option to `True`.
 
+### ignore
+
+Exclude a field from the form's `parameters` attribute. The field is still cleaned, validated and is accessible in the `cleaned_data` attribute.
+
+```python
+from alo import forms
+
+class BookForm(forms.QueryForm):
+    foo = forms.IntegerField(required=False)
+    bar = forms.IntegerField(required=False, initial=50)
+
+    class Meta:
+        ignore = ['foo']
+```
+
+### required
+
+Indicate which fields are required. You may use this to override auto generated fields in `QueryModelForm`. 
+
+```python
+from alo import forms
+
+class StoreForm(forms.QueryModelForm):
+    class Meta:
+        model = Store
+        required = ['name', 'address']
+```
+
+It can also be used as an altenative to explicitly pass the `required` argument to each field (if `required = []` no field is required). 
+
+By default `required` is `None`, which means each field will assume its original property.
