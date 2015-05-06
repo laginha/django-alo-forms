@@ -18,15 +18,16 @@ class QueryFormMixin(object):
         return self._parameters
     
     def get_data(self, name):
+        is_valid = lambda x: x not in [None, '']
         value = self.cleaned_data.get(name, None)
-        return value if value else self._meta.defaults.get(name, None)
+        return value if is_valid(value) else self._meta.defaults.get(name, None)
     
     def set_parameters(self):
         self._parameters = {}
         self._validated_data = {}
         for fieldname,lookup in self._meta.lookups.iteritems():
             value = self.get_data(fieldname)
-            if value:
+            if value != None:
                 self._validated_data[fieldname] = value
                 if fieldname not in self._meta.ignore:
                     self._parameters[lookup] = value
@@ -34,9 +35,9 @@ class QueryFormMixin(object):
             values = []
             for fieldname in fields:
                 value = self.get_data(fieldname)
-                if value:
+                if value != None:
                     self._validated_data[fieldname] = value
-                    self._parameters.pop(self._meta.lookups[fieldname])
+                    self.pop_from_parameters(fieldname)
                     values.append(value)
             if len(values) == len(fields):
                 self._parameters.update(call(*values))
@@ -62,15 +63,15 @@ class QueryFormMixin(object):
         self._meta.lookups = {}
         self._meta.no_defaults = getattr(self.Meta, 'no_defaults', False)
         for name,field in self.fields.iteritems():
-             self._meta.lookups[name] = name
-             if not self._meta.no_defaults:
-                 if callable(field.initial):
-                     self._meta.defaults[name] = field.initial()
-                 else:
-                     self._meta.defaults[name] = field.initial
-        if hasattr(self.Meta, 'lookups'):
-            for fieldname,alias in self.Meta.lookups.iteritems():
-                self._meta.lookups[fieldname] = alias
+            if hasattr(self.Meta, 'lookups'):
+                self._meta.lookups[name] = self.Meta.lookups.get(name, name)
+            else:
+                self._meta.lookups[name] = name
+            if not self._meta.no_defaults:
+                if callable(field.initial):
+                    self._meta.defaults[name] = field.initial()
+                else:
+                    self._meta.defaults[name] = field.initial
     
     def set_multifield_lookups(self):
         self._meta.multifield_lookups = {}
@@ -87,7 +88,7 @@ class QueryFormMixin(object):
                     args.append( self.fields[value] )
                 elif isinstance(value, BaseOperator):
                     args.append( get_logic(value) )
-            return operator.__class__.create(*args)
+            return operator.create(*args, required=operator.required)
             
         self._meta.extralogic = []
         if hasattr(self.Meta, 'extralogic'):
@@ -99,22 +100,34 @@ class QueryFormMixin(object):
             self.add_error(name, messages)
         except AttributeError:
             self._errors[name] = messages
-                
+    
+    def pop_from_parameters(self, fieldname):
+        lookup = self._meta.lookups[fieldname]
+        self._parameters.pop(lookup, None)
+           
     def clean_extralogic(self):
         
-        def is_to_ignore(name):
+        def is_default_value(name):
             validated_data = self.validated_data.get(name, None)
             default_data = self._meta.defaults.get(name, None)
             return validated_data and validated_data == default_data
         
         for each in self._meta.extralogic:
             try:
-                each.is_valid(self.validated_data)
+                result = each.is_valid(self.validated_data)
             except ValidationError as e:
-                for each in e.subjects:
-                    if is_to_ignore(each):
-                        self._parameters.pop(each, None)
-                if is_to_ignore(e.subject):
-                    self._parameters.pop(e.subject, None)
+                if is_default_value(e.subject):
+                    self.pop_from_parameters(e.subject)
+                    for name in e.subjects:
+                        if not is_default_value(name):
+                            self.add_validation_error(name, e.messages)
+                            break
+                        self.pop_from_parameters(name)
                 else:
                     self.add_validation_error(e.subject, e.messages)
+            else:
+                if isinstance(each, OR):
+                    for field in each.iter_all_operands():
+                        if field.attrname != result:
+                            self.pop_from_parameters(field.attrname)
+                

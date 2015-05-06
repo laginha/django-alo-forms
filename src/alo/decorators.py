@@ -37,10 +37,11 @@ class validate(object):
                 return form_kwargs
             
             def error_response(form):
+                content = {'Errors': form.errors}
                 if native_json_response:
-                    return JsonResponse(form.errors, status=400, safe=False)
+                    return JsonResponse(content, status=400, safe=False)
                 else:
-                    return JsonResponse(form.errors, status=400)
+                    return JsonResponse(content, status=400)
             
             def validate(request):
                 request.form = self.form_class(**get_form_kwargs(each))

@@ -297,8 +297,9 @@ class QueryFormTestCase(TestCase):
         self.assertTrue(f.is_valid())
         
     def test_ignore(self):
+        
         class Form(QueryForm):
-            a = Field(required=False)
+            a, b = A, B
             
             class Meta:
                 ignore = ['a']
@@ -307,6 +308,10 @@ class QueryFormTestCase(TestCase):
         self.assertTrue(f.is_valid())
         self.assertTrue('a' in f.validated_data)
         self.assertFalse('a' in f.parameters)
+        f = Form({'b': 1})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('b' in f.validated_data)
+        self.assertTrue('b' in f.parameters)
     
     def test_is_valid_with_or(self):
         
@@ -320,18 +325,61 @@ class QueryFormTestCase(TestCase):
         
         f = Form({})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' not in f.parameters)
         f = Form({'a':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' not in f.parameters)
         f = Form({'b':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' in f.parameters)
+        self.assertTrue('c' not in f.parameters)
         f = Form({'c':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' in f.parameters)
         f = Form({'a':1, 'b':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' not in f.parameters)
         f = Form({'a':1, 'b':1, 'c':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' not in f.parameters)
+        
+        class Form(QueryForm):
+            a, b = A, B
     
-    def test_is_valid_with_and(self):
+            class Meta:
+                extralogic = [
+                    OR('a', 'b', required=True),
+                ]
+        
+        f = Form({})
+        self.assertFalse(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        f = Form({'a':1})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        f = Form({'b':1})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' in f.parameters)
+        f = Form({'a':1, 'b':1})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+    
+    def test_is_valid_with_and(self):  
         
         class Form(QueryForm):
             a, b, c = A, B, C
@@ -343,12 +391,18 @@ class QueryFormTestCase(TestCase):
         
         f = Form({})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' not in f.parameters)
         f = Form({'a':1})
         self.assertFalse(f.is_valid())
         f = Form({'a':1, 'b':1})
         self.assertFalse(f.is_valid())
         f = Form({'a':1, 'b':1, 'c':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' in f.parameters)
+        self.assertTrue('c' in f.parameters)
         
         class Form(QueryForm):
             a = Field(required=False, initial=1)
@@ -361,12 +415,33 @@ class QueryFormTestCase(TestCase):
         
         f = Form({})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' not in f.parameters)
         f = Form({'a':1})
         self.assertTrue(f.is_valid())
         f = Form({'a':2})
         self.assertFalse(f.is_valid())
         f = Form({'a':1, 'b':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' in f.parameters)
+        
+        class Form(QueryForm):
+            a = Field(required=False, initial=1)
+            b = Field(required=False)
+            c = Field(required=False)
+    
+            class Meta:
+                extralogic = [
+                    AND('a', 'b', 'c'),
+                ]
+                
+        f = Form({'b':1})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':1, 'b':1})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':2, 'b':1})
+        self.assertFalse(f.is_valid())
         
         class Form(QueryForm):
             a = Field(required=True)
@@ -381,10 +456,47 @@ class QueryFormTestCase(TestCase):
         self.assertFalse(f.is_valid())
         f = Form({'a':1})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertEqual(f.parameters['a'], 1)
+        self.assertTrue('b' in f.parameters)
+        self.assertEqual(f.parameters['b'], 1)
         f = Form({'a':1, 'b':2})
         self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertEqual(f.parameters['a'], 1)
+        self.assertTrue('b' in f.parameters)
+        self.assertEqual(f.parameters['b'], 2)
         f = Form({'b':1})
         self.assertFalse(f.is_valid())
+    
+    def test_nexted_logic(self):
+        
+        class Form(QueryForm):
+            a, b, c = A, B, C
+    
+            class Meta:
+                extralogic = [
+                    AND('a', OR('b', 'c')),
+                ]
+        
+        f = Form({})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' not in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' not in f.parameters)
+        f = Form({'a':1})
+        self.assertFalse(f.is_valid())
+        f = Form({'a':1, 'b':2})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' in f.parameters)
+        self.assertTrue('c' not in f.parameters)
+        f = Form({'a':1, 'c':2})
+        self.assertTrue(f.is_valid())
+        self.assertTrue('a' in f.parameters)
+        self.assertTrue('b' not in f.parameters)
+        self.assertTrue('c' in f.parameters)
+        
         
     def test_extralogic(self):
         
@@ -423,7 +535,7 @@ class QueryFormTestCase(TestCase):
         assert isinstance(logic[2].operands[2], Field)
         assert isinstance(logic[2].operands[1].operands[0], Field)
         assert isinstance(logic[2].operands[1].operands[1], Field)
-        assert str(logic[2]) == "( c AND ( d OR e ) AND a )"
+        assert str(logic[2]) == "( c AND ( d OR e ) AND a )", str(logic[2])
         assert len(logic[2]) == 4
                 
         assert isinstance(logic[3], OR)

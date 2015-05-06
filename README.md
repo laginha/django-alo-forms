@@ -35,8 +35,12 @@ class BookForm(forms.QueryForm):
         }
         extralogic = [
             # Combine the form fields with boolean logic
-            AND('genre', OR('author', 'house')) 
+            
+            AND('genre', OR('author', 'house')), 
             # if 'genre' provided, so should also be either 'author' or 'house'
+            
+            OR('title', 'year', required=True) 
+            # either 'year' or 'title' must be provided
         ]
 
 class BookModelForm(forms.QueryModelForm):
