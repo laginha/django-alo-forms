@@ -468,6 +468,8 @@ class QueryFormTestCase(TestCase):
         self.assertEqual(f.parameters['b'], 2)
         f = Form({'b':1})
         self.assertFalse(f.is_valid())
+        f = Form({'b':2})
+        self.assertFalse(f.is_valid())
     
     def test_nexted_logic(self):
         
