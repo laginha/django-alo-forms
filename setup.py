@@ -8,7 +8,7 @@ reqs = [str(each.req) for each in install_reqs if each.req]
 
 setup(
     name             = 'django-alo-forms',
-    version          = '1.8.0',
+    version          = '1.9.0',
     author           = "Diogo Laginha",
     author_email     = "diogo.laginha.machado@gmail.com",
     url              = 'https://github.com/laginha/django-alo-forms',

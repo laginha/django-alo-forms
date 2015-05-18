@@ -52,14 +52,11 @@ class BookModelForm(forms.QueryModelForm):
             'author', 'publishing_house'
         )
         lookups = {
-            # field_name: model_field__lookups
             'publication_date': 'publication_date__year',
             'title': 'title__icontains',
         }
         extralogic = [
-            # Combine the form fields with boolean logic
-            AND('genres', OR('author', 'publishing_house'))
-            # if 'genre' provided, so should also be either 'author' or 'house' 
+            AND('genres', 'author', 'year')),
         ]
 ```
 
@@ -100,6 +97,96 @@ If `form` is not valid, `validate` returns a JsonResponse with `form.errors` as 
 It is worth noting that `validate` works in any kind of views (function-base, class-bases, custom-bases) since it scans the view arguments for the `HttpRequest` object to validate the form.
 
 Besides, `validate` is able to detect if the given form class is a subclass `Form` or `ModelForm`. In case of the latter, the decorator instantiates the form with the `instance` argument if the *named group* `pk` is present in the *urlpattern* (useful for getting or updating a resource). You can change the expected *named group* using the decorator argument `add_instance_using`.
+
+
+## Other meta options
+
+### multifield_lookups
+
+Group multiple fields to a single lookup. Useful for ranges and geo-lookups.
+
+```python
+from django.contrib.gis.measure import D
+from alo import forms
+
+class StoreForm(forms.QueryForm):
+    books  = forms.IntegerField(required=False)
+    range  = forms.IntegerField(required=False)
+    center = forms.PointField(required=False)
+    radius = forms.IntegerField(required=False)
+    
+    class Meta:
+        multifield_lookups = {
+            # tuple_of_field_names: callable_that_returns_a_dict
+            ('center', 'radius'): lambda center,radius: {
+                'location__distance_lte': (center, D(km=radius))
+            },
+            ('books', 'range'):  lambda books,range: {
+                'pages__range': (books-range, books+range)
+            },
+        }
+        extralogic = [
+            AND('books', 'ranges'),
+            AND('center', 'radius'),   
+        ]
+```
+
+### no_defaults
+
+By default, `QueryForm.parameter` and `QueryModelForm.parameter` instance attribute use the `initial` field's argument as the default value when no input is given for that particular field.
+
+> Beware the `BooleanField` in Django will automatically be set to `False` if no input given, regardless of the `initial` value.
+
+```python
+from alo import forms
+
+class BookForm(forms.QueryForm):
+    pages = forms.IntegerField(required=False)
+    range = forms.IntegerField(required=False, initial=50)
+    
+    class Meta:
+        extralogic = [
+            AND('pages', 'range')
+            # Even though `range` has a default value it will only be taken
+            # into account if `pages` is provided. In other words the form is 
+            # valid wether `pages` is provided or not
+        ]
+```
+
+To disable this feature, set `no_defaults` meta option to `True`.
+
+
+### ignore
+
+Exclude a field from the form's `parameters` attribute. The field is still cleaned, validated and is accessible in the `cleaned_data` attribute.
+
+```python
+from alo import forms
+
+class BookForm(forms.QueryForm):
+    foo = forms.IntegerField(required=False)
+    bar = forms.IntegerField(required=False, initial=50)
+
+    class Meta:
+        ignore = ['foo']
+```
+
+### required
+
+Indicate which fields are required. You may use this to override auto generated fields in `QueryModelForm`. 
+
+```python
+from alo import forms
+
+class StoreForm(forms.QueryModelForm):
+    class Meta:
+        model = Store
+        required = ['name', 'address']
+```
+
+It can also be used as an altenative to explicitly pass the `required` argument to each field (if `required = []` no field is required). 
+
+By default `required` is `None`, which means each field will assume its original property.
 
 
 ## Other fields
@@ -164,88 +251,3 @@ class StoreForm(forms.QueryForm):
 - converts the input to a tuple: `(<Point>, <Distance object>)`
 - takes two additional argument: `distance` (defaults to `5`) and `unit` (defaults to `'km'`)
 
-
-## Other meta options
-
-### multifield_lookups
-
-Group multiple fields to a single lookup. Useful for ranges and geo-lookups.
-
-```python
-from django.contrib.gis.measure import D
-from alo import forms
-
-class StoreForm(forms.QueryForm):
-    books  = forms.IntegerField(required=False)
-    range  = forms.IntegerField(required=False)
-    center = forms.PointField(required=False)
-    radius = forms.IntegerField(required=False)
-    
-    class Meta:
-        multifield_lookups = {
-            # tuple_of_field_names: callable_that_returns_a_dict
-            ('center', 'radius'): lambda center,radius: {
-                'location__distance_lte': (center, D(km=radius))
-            },
-            ('books', 'range'):  lambda books,range: {
-                'pages__range': (books-range, books+range)
-            },
-        }
-        extralogic = [
-            AND('books', 'ranges'),
-            AND('center', 'radius'),   
-        ]
-```
-
-### no_defaults
-
-By default, `QueryForm.parameter` and `QueryModelForm.parameter` instance attribute use the `initial` field's argument as the default value when no input is given for that particular field.
-
-```python
-from alo import forms
-
-class BookForm(forms.QueryForm):
-    pages = forms.IntegerField(required=True)
-    range = forms.IntegerField(required=False, initial=50)
-    
-    class Meta:
-        extralogic = [
-            # no need to add AND('pages', 'range')
-            # since 'range' has a default value (50)
-            # and pages is required
-        ]
-```
-
-To disable this feature, set `no_defaults` meta option to `True`.
-
-### ignore
-
-Exclude a field from the form's `parameters` attribute. The field is still cleaned, validated and is accessible in the `cleaned_data` attribute.
-
-```python
-from alo import forms
-
-class BookForm(forms.QueryForm):
-    foo = forms.IntegerField(required=False)
-    bar = forms.IntegerField(required=False, initial=50)
-
-    class Meta:
-        ignore = ['foo']
-```
-
-### required
-
-Indicate which fields are required. You may use this to override auto generated fields in `QueryModelForm`. 
-
-```python
-from alo import forms
-
-class StoreForm(forms.QueryModelForm):
-    class Meta:
-        model = Store
-        required = ['name', 'address']
-```
-
-It can also be used as an altenative to explicitly pass the `required` argument to each field (if `required = []` no field is required). 
-
-By default `required` is `None`, which means each field will assume its original property.

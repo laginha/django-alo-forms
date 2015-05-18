@@ -16,7 +16,7 @@ class BaseOperator(object):
     def iter_all_operands(self):
         for each in self.operands:
             if isinstance(each, BaseOperator):
-                for i in each.get_all_operands():
+                for i in each.iter_all_operands():
                     yield i
             else:
                 yield each
@@ -36,7 +36,7 @@ class BaseOperator(object):
         exception.subjects = subjects or []
         raise exception
     
-    def is_valid_data(self, obj, validated_data):
+    def data_exists(self, obj, validated_data):
         if isinstance(obj, Field):
             return validated_data.get(obj.attrname)
         else:
@@ -51,7 +51,7 @@ class OR(BaseOperator):
     
     def is_valid(self, validated_data):
         for each in self.operands:
-            if self.is_valid_data(each, validated_data):
+            if self.data_exists(each, validated_data):
                 return each.attrname
         if self.required:
             self.raise_exception(subject=each.attrname)
@@ -69,7 +69,7 @@ class AND(BaseOperator):
     def is_valid(self, validated_data):
         validated = []
         for each in self.operands:
-            if not self.is_valid_data(each, validated_data):
+            if not self.data_exists(each, validated_data):
                 if self.required:
                     self.raise_exception(subject=each.attrname)
             else:
