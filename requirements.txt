@@ -1,2 +1,2 @@
 django
-easy_response
+django_easy_response
