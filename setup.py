@@ -5,7 +5,7 @@ from setuptools import find_packages
 
 setup(
     name             = 'django-alo-forms',
-    version          = '1.9.1',
+    version          = '1.9.2',
     author           = "Diogo Laginha",
     author_email     = "diogo.laginha.machado@gmail.com",
     url              = 'https://github.com/laginha/django-alo-forms',
