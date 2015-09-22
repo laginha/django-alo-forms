@@ -103,7 +103,7 @@ class QueryFormMixin(object):
             values = []
             for fieldname in fields:
                 value = self._validated_data.get(fieldname)
-                if value != None:
+                if value is not None:
                     parameters.pop(meta.lookups.get(fieldname), None)
                     values.append(value.object)
             if len(values) == len(fields):

@@ -5,7 +5,7 @@ from setuptools import find_packages
 
 setup(
     name             = 'django-alo-forms',
-    version          = '1.9.2',
+    version          = '1.9.3',
     author           = "Diogo Laginha",
     author_email     = "diogo.laginha.machado@gmail.com",
     url              = 'https://github.com/laginha/django-alo-forms',
@@ -13,7 +13,8 @@ setup(
     packages         = find_packages(where='src'),
     package_dir      = {'': 'src'},
     install_requires = [
-        'django', 'django_easy_response',
+        'django', 
+        'django_easy_response',
     ],
     extras_require   = {},
     zip_safe         = False,
